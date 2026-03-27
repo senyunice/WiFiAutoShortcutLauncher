@@ -24,46 +24,36 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/theos/theos.git /tmp/theos
 
-      - name: Check Theos bin
+      - name: Fix Theos perl scripts
         run: |
-          ls -la /tmp/theos/bin/ | head -20
-          echo "---"
-          for f in /tmp/theos/bin/*; do
-            if [ -L "$f" ]; then
-              echo "SYMLINK: $f -> $(readlink $f)"
-            elif [ -f "$f" ]; then
-              head=$(head -1 "$f" 2>/dev/null)
-              echo "FILE: $f | shebang: $head"
-            fi
-          done
-
-      - name: Fix Theos perl symlinks
-        run: |
-          THEOS_PERL=""
-          for p in /usr/bin/perl /usr/local/bin/perl /bin/perl; do
-            if [ -x "$p" ]; then
-              THEOS_PERL="$p"
-              break
-            fi
-          done
+          THEOS_PERL=$(which perl)
           echo "Using perl: $THEOS_PERL"
           
-          for f in /tmp/theos/bin/*; do
-            if [ -L "$f" ]; then
-              target=$(readlink "$f")
+          for symlink in /tmp/theos/bin/*; do
+            if [ -L "$symlink" ]; then
+              target=$(readlink "$symlink")
               if [[ "$target" == *"/perl"* ]] || [[ "$target" == *"/perl5/"* ]]; then
-                if [ ! -e "$f" ]; then
-                  echo "Fixing broken symlink: $f -> $target"
-                  rm "$f"
-                  # Find the actual script name
-                  basename $(echo "$target" | sed 's|.*/||')
+                real_target=$(readlink -f "$symlink" 2>/dev/null)
+                if [ ! -f "$real_target" ]; then
+                  echo "Removing broken perl symlink: $symlink -> $target"
+                  rm -f "$symlink"
                 fi
               fi
             fi
           done
           
-          echo "After fix:"
-          ls -la /tmp/theos/bin/ | head -10
+          # Copy perl scripts from lib to bin if they exist
+          for script in dm.pl logify.pl nic.pl nicify.pl gen-commands.pl; do
+            if [ -f "/tmp/theos/lib/$script" ]; then
+              if [ ! -f "/tmp/theos/bin/$script" ] || [ -L "/tmp/theos/bin/$script" ]; then
+                cp "/tmp/theos/lib/$script" "/tmp/theos/bin/$script"
+                chmod +x "/tmp/theos/bin/$script"
+                echo "Copied $script to bin"
+              fi
+            fi
+          done
+          
+          ls -la /tmp/theos/bin/*.pl 2>/dev/null | head -5 || echo "No .pl files in bin"
 
       - name: Download iOS SDK
         run: |
@@ -83,21 +73,18 @@ jobs:
           THEOS: /tmp/theos
         run: |
           export THEOS=/tmp/theos
-          export PATH=$THEOS/bin:$PATH
+          export PATH=/tmp/theos/bin:/usr/local/bin:/usr/bin:/bin:$PATH
           cd ${{ github.workspace }}
           
-          # Check perl
-          perl -e 'print "Perl: $]\n";'
-          
-          # Check dm.pl
-          ls -la $THEOS/bin/dm.pl 2>/dev/null || echo "dm.pl missing"
-          
-          # Try build
+          echo "PATH=$PATH"
+          which perl
+          which make
+          ls $THEOS/bin/dm.pl
           make package THEOS=$THEOS ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1
 
       - name: Check output
         run: |
-          find . -name "*.deb" -type f 2>/dev/null || echo "No .deb"
+          find . -name "*.deb" -type f
 
       - name: Upload artifact
         if: success()
