@@ -20,10 +20,16 @@ jobs:
             curl git perl unzip xz-utils cpio \
             dpkg-dev libxml2-dev
 
-      - name: Clone Theos (full)
+      - name: Clone Theos (full + submodules)
         run: |
           rm -rf /tmp/theos
-          git clone https://github.com/theos/theos.git /tmp/theos
+          git clone --recurse-submodules https://github.com/theos/theos.git /tmp/theos
+
+      - name: Verify Theos submodules
+        run: |
+          ls -la /tmp/theos/bin/dm.pl
+          file /tmp/theos/bin/dm.pl
+          /usr/bin/perl /tmp/theos/bin/dm.pl --version 2>&1 | head -1 || echo "dm.pl not working"
 
       - name: Download and install iOS SDK
         run: |
