@@ -24,6 +24,26 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/theos/theos.git /tmp/theos
 
+      - name: Fix Theos symlinks
+        run: |
+          cd /tmp/theos
+          perl -v | head -3 || echo "perl not found - will fix symlinks"
+          ls /usr/bin/perl /usr/local/bin/perl 2>/dev/null || echo "perl binaries missing"
+          # Fix broken symlinks in theos/bin that point to non-existent perl
+          for f in bin/*; do
+            if [ -L "$f" ]; then
+              target=$(readlink "$f")
+              if [[ "$target" == *"/usr/bin/perl"* ]] || [[ "$target" == *"/usr/local/bin/perl"* ]]; then
+                if [ ! -e "$f" ]; then
+                  echo "Fixing broken symlink: $f -> $target"
+                  # Replace with direct perl invocation wrapper
+                  rm "$f"
+                fi
+              fi
+            fi
+          done
+          ls -la bin/ | head -10
+
       - name: Download and install iOS SDK
         run: |
           cd /tmp/theos/sdks
@@ -37,19 +57,12 @@ jobs:
           THEOS: /tmp/theos
           PATH: /tmp/theos/bin:/usr/local/bin:/usr/bin:/bin
         run: |
-          echo "=== Environment ==="
-          echo "THEOS=$THEOS"
-          echo "PATH=$PATH"
-          echo "=== Testing dm.pl ==="
-          ls /tmp/theos/bin/dm.pl
+          which perl || (sudo apt-get install -y perl && echo "Perl installed")
+          perl -v | head -2
           perl /tmp/theos/bin/dm.pl --version 2>&1 | head -3
-          echo "which dm.pl: $(which dm.pl 2>&1 || echo 'not found')"
-          echo "=== Files in workspace ==="
-          ls -la
-          echo "=== Running make ==="
           cd ${{ github.workspace }}
           make package THEOS=/tmp/theos ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1
-          echo "=== Done ==="
+          echo "---Done---"
           find . -name "*.deb" -type f
 
       - name: Upload artifact
