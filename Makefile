@@ -16,7 +16,7 @@ $(TWEAK_NAME)_FILES = \
 	SchedulePickerViewController.mm \
 	WiFiWatcher.mm \
 	ShortcutsRunner.mm \
-	WIFIRule.m \
+	WIFIRule.mm \
 	ScheduleManager.mm \
 	ConfigManager.mm
 
@@ -24,6 +24,7 @@ $(TWEAK_NAME)_OBJCXX_FILES = $(filter %.mm, $($(TWEAK_NAME)_FILES))
 $(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation Preferences UserNotifications
 $(TWEAK_NAME)_PRIVATE_FRAMEWORKS = Preferences
 
+# 添加本地entitlements
 $(TWEAK_NAME)_ENTITLEMENTS = WiFiAutoShortcutLauncher.entitlements
 
 include $(THEOS)/makefiles/tweak.mk

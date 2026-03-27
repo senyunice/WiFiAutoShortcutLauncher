@@ -10,7 +10,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface SchedulePickerViewController : UIViewController <UITableViewDelegate, UITableViewDataSource>
 
-@property (nonatomic, assign, nullable) id<SchedulePickerDelegate> delegate;
+@property (nonatomic, weak, nullable) id<SchedulePickerDelegate> delegate;
 @property (nonatomic, assign) NSInteger selectedSchedule;
 
 @end

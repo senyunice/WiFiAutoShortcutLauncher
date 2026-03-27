@@ -14,7 +14,7 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 
-#define UIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 green:((float)((rgbValue & 0x00FF00) >> 8))/255.0 blue:((float)((rgbValue & 0x0000FF) >> 0))/255.0 alpha:1.0]
+#define UIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 green:((float)((rgbValue & 0x00FF00) >> 8))/255.0 blue:((float)(rgbValue & 0x0000FF))/255.0 alpha:1.0]
 #define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v) ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedAscending)
 
 static NSString *const kEnabledKey = @"WiFiAutoShortcutLauncherEnabled";
@@ -39,18 +39,6 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
 @property (nonatomic, strong) UIDatePicker *disabledEndPicker;
 @property (nonatomic, strong) UIView *addRuleOverlay;
 @property (nonatomic, strong) UIView *currentlyEditingCell;
-
-// For save overlay
-@property (nonatomic, strong) UITextField *overlayWifiTextField;
-@property (nonatomic, strong) UITextField *overlayShortcutTextField;
-@property (nonatomic, strong) UISwitch *overlayEnabledSwitch;
-@property (nonatomic, strong) UISegmentedControl *overlayScheduleControl;
-@property (nonatomic, strong) UIView *overlayFormContainer;
-@property (nonatomic, strong) WIFIRule *overlayRuleToEdit;
-@property (nonatomic, assign) NSInteger overlayEditIndex;
-
-- (void)saveOverlayData;
-- (void)cancelOverlay:(id)sender;
 
 @end
 
@@ -82,6 +70,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
         self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeAlways;
     }
 
+    // 添加关于按钮
     UIBarButtonItem *aboutButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"info.circle"]
                                                                      style:UIBarButtonItemStylePlain
                                                                     target:self
@@ -92,6 +81,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
 - (void)setupUI {
     self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
 
+    // 创建主表格
     self.mainTableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.mainTableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.mainTableView.delegate = self;
@@ -101,11 +91,15 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     [self.mainTableView registerClass:[WiFiRuleCell class] forCellReuseIdentifier:@"RuleCell"];
     [self.view addSubview:self.mainTableView];
 
+    // 设置头部视图
     [self setupHeaderView];
+
+    // 设置底部视图
     [self setupFooterView];
 }
 
 - (void)setupHeaderView {
+    // 插件开关头部
     UIView *headerContainer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 80)];
 
     UIView *masterSwitchContainer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 60)];
@@ -134,6 +128,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
 }
 
 - (void)setupFooterView {
+    // 关于信息
     UIView *footerContainer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 80)];
 
     UILabel *versionLabel = [[UILabel alloc] init];
@@ -145,7 +140,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     [footerContainer addSubview:versionLabel];
 
     UILabel *copyrightLabel = [[UILabel alloc] init];
-    copyrightLabel.text = @"\u00a9 2024 All Rights Reserved";
+    copyrightLabel.text = @"© 2024 All Rights Reserved";
     copyrightLabel.font = [UIFont systemFontOfSize:11];
     copyrightLabel.textColor = [UIColor quaternaryLabelColor];
     copyrightLabel.textAlignment = NSTextAlignmentCenter;
@@ -236,6 +231,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     self.isEnabled = sender.on;
     [self savePreferences];
 
+    // 动画反馈
     [UIView animateWithDuration:0.3 animations:^{
         self.mainTableView.alpha = sender.on ? 1.0 : 0.6;
     }];
@@ -279,7 +275,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
 
 - (void)showAbout {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"关于"
-                                                                   message:@"WiFi自动快捷指令启动器\n\n版本: 1.0.0\n\n根据连接的WiFi网络自动执行快捷指令的越狱插件。\n\n检测频率: 5秒\n\n\u00a9 2024 All Rights Reserved"
+                                                                   message:@"WiFi自动快捷指令启动器\n\n版本: 1.0.0\n\n根据连接的WiFi网络自动执行快捷指令的越狱插件。\n\n检测频率: 5秒\n\n© 2024 All Rights Reserved"
                                                             preferredStyle:UIAlertControllerStyleAlert];
 
     UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil];
@@ -364,7 +360,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
 
     UISegmentedControl *scheduleControl = [[UISegmentedControl alloc] initWithItems:@[@"始终", @"工作日", @"周末"]];
     scheduleControl.frame = CGRectMake(20, 218, formWidth - 40, 32);
-    scheduleControl.selectedSegmentIndex = rule ? (NSInteger)rule.scheduleType : 0;
+    scheduleControl.selectedSegmentIndex = rule ? rule.scheduleType : 0;
     [formContainer addSubview:scheduleControl];
 
     // 启用开关
@@ -394,17 +390,51 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     [saveButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     saveButton.layer.cornerRadius = 10;
 
-    // Store references for save action
-    self.overlayWifiTextField = wifiTextField;
-    self.overlayShortcutTextField = shortcutTextField;
-    self.overlayEnabledSwitch = enabledSwitch;
-    self.overlayScheduleControl = scheduleControl;
-    self.overlayFormContainer = formContainer;
-    self.overlayRuleToEdit = rule;
-    self.overlayEditIndex = index;
-    self.addRuleOverlay = formContainer;
+    __block WIFIRule *ruleToEdit = rule;
+    __block NSInteger editIndex = index;
 
-    [saveButton addTarget:self action:@selector(saveOverlayData) forControlEvents:UIControlEventTouchUpInside];
+    [saveButton addAction:[UIButtonAction actionWithHandler:^(UIControl * _Nonnull control) {
+        NSString *wifiName = wifiTextField.text;
+        NSString *shortcutName = shortcutTextField.text;
+
+        if (wifiName.length == 0 || shortcutName.length == 0) {
+            UIAlertController *errorAlert = [UIAlertController alertControllerWithTitle:@"错误"
+                                                                              message:@"请填写WiFi名称和快捷指令名称"
+                                                                       preferredStyle:UIAlertControllerStyleAlert];
+            [errorAlert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
+            [self presentViewController:errorAlert animated:YES completion:nil];
+            return;
+        }
+
+        if (editIndex < 0) {
+            // 新增规则
+            WIFIRule *newRule = [[WIFIRule alloc] initWithSSID:wifiName
+                                            shortcutIdentifier:[@"shortcut-" stringByAppendingString:[[NSUUID UUID] UUIDString]]
+                                                  shortcutName:shortcutName];
+            newRule.isEnabled = enabledSwitch.on;
+            newRule.scheduleType = scheduleControl.selectedSegmentIndex;
+            [self.rules addObject:newRule];
+        } else {
+            // 编辑规则
+            ruleToEdit.ssid = wifiName;
+            ruleToEdit.shortcutName = shortcutName;
+            ruleToEdit.isEnabled = enabledSwitch.on;
+            ruleToEdit.scheduleType = scheduleControl.selectedSegmentIndex;
+        }
+
+        [self savePreferences];
+
+        [UIView animateWithDuration:0.25 animations:^{
+            overlayBg.alpha = 0;
+            formContainer.alpha = 0;
+            formContainer.transform = CGAffineTransformMakeScale(0.9, 0.9);
+        } completion:^(BOOL finished) {
+            [overlayBg removeFromSuperview];
+            [formContainer removeFromSuperview];
+            [self.mainTableView reloadData];
+        }];
+    }] forControlEvents:UIControlEventTouchUpInside];
+
     [formContainer addSubview:saveButton];
 
     // 显示动画
@@ -417,49 +447,8 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     // 点击背景关闭
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissOverlay:)];
     [overlayBg addGestureRecognizer:tapGesture];
-}
 
-- (void)saveOverlayData {
-    NSString *wifiName = self.overlayWifiTextField.text;
-    NSString *shortcutName = self.overlayShortcutTextField.text;
-
-    if (wifiName.length == 0 || shortcutName.length == 0) {
-        UIAlertController *errorAlert = [UIAlertController alertControllerWithTitle:@"错误"
-                                                                          message:@"请填写WiFi名称和快捷指令名称"
-                                                                   preferredStyle:UIAlertControllerStyleAlert];
-        [errorAlert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
-        [self presentViewController:errorAlert animated:YES completion:nil];
-        return;
-    }
-
-    if (self.overlayEditIndex < 0) {
-        // 新增规则
-        WIFIRule *newRule = [[WIFIRule alloc] initWithSSID:wifiName
-                                        shortcutIdentifier:[@"shortcut-" stringByAppendingString:[[NSUUID UUID] UUIDString]]
-                                              shortcutName:shortcutName];
-        newRule.isEnabled = self.overlayEnabledSwitch.on;
-        newRule.scheduleType = (WIFIScheduleType)self.overlayScheduleControl.selectedSegmentIndex;
-        [self.rules addObject:newRule];
-    } else {
-        // 编辑规则
-        self.overlayRuleToEdit.ssid = wifiName;
-        self.overlayRuleToEdit.shortcutName = shortcutName;
-        self.overlayRuleToEdit.isEnabled = self.overlayEnabledSwitch.on;
-        self.overlayRuleToEdit.scheduleType = (WIFIScheduleType)self.overlayScheduleControl.selectedSegmentIndex;
-    }
-
-    [self savePreferences];
-
-    UIView *overlayBg = self.addRuleOverlay.superview;
-    [UIView animateWithDuration:0.25 animations:^{
-        overlayBg.alpha = 0;
-        self.addRuleOverlay.alpha = 0;
-        self.addRuleOverlay.transform = CGAffineTransformMakeScale(0.9, 0.9);
-    } completion:^(BOOL finished) {
-        [overlayBg removeFromSuperview];
-        [self.addRuleOverlay removeFromSuperview];
-        [self.mainTableView reloadData];
-    }];
+    self.addRuleOverlay = formContainer;
 }
 
 - (void)dismissOverlay:(id)sender {
@@ -474,22 +463,14 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     }];
 }
 
-#pragma mark - SchedulePickerDelegate
-
-- (void)schedulePicker:(SchedulePickerViewController *)picker didSelectSchedule:(NSInteger)scheduleType {
-    // Handle schedule picker selection
-    (void)picker;
-    (void)scheduleType;
-}
-
 #pragma mark - WiFiRuleCellDelegate
 
 - (void)ruleCellDidToggleEnabled:(UITableViewCell *)cell {
     NSIndexPath *indexPath = [self.mainTableView indexPathForCell:cell];
     if (!indexPath) return;
 
-    NSInteger ruleIndex = indexPath.row - 4;
-    if (ruleIndex >= 0 && ruleIndex < (NSInteger)self.rules.count) {
+    NSInteger ruleIndex = indexPath.row - 4; // 前面有4个设置项
+    if (ruleIndex >= 0 && ruleIndex < self.rules.count) {
         WIFIRule *rule = self.rules[ruleIndex];
         rule.isEnabled = !rule.isEnabled;
         [self savePreferences];
@@ -519,7 +500,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return 4 + self.rules.count;
+    return 4 + self.rules.count; // 4个设置项 + 规则列表
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -528,11 +509,13 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.textLabel.numberOfLines = 0;
 
+    // 清除原有子视图
     for (UIView *subview in cell.contentView.subviews) {
         [subview removeFromSuperview];
     }
 
     if (indexPath.row == 0) {
+        // 工作日模式
         cell.textLabel.text = @"工作日模式";
         UISwitch *weekdaySwitch = [[UISwitch alloc] init];
         weekdaySwitch.on = self.weekdayModeEnabled;
@@ -540,6 +523,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
         [weekdaySwitch addTarget:self action:@selector(weekdaySwitchChanged:) forControlEvents:UIControlEventValueChanged];
         cell.accessoryView = weekdaySwitch;
     } else if (indexPath.row == 1) {
+        // 周末模式
         cell.textLabel.text = @"周末模式";
         UISwitch *weekendSwitch = [[UISwitch alloc] init];
         weekendSwitch.on = self.weekendModeEnabled;
@@ -547,6 +531,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
         [weekendSwitch addTarget:self action:@selector(weekendSwitchChanged:) forControlEvents:UIControlEventValueChanged];
         cell.accessoryView = weekendSwitch;
     } else if (indexPath.row == 2) {
+        // 不生效时段设置
         cell.textLabel.text = @"不生效时段";
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         cell.selectionStyle = UITableViewCellSelectionStyleDefault;
@@ -558,6 +543,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
         timeLabel.textAlignment = NSTextAlignmentRight;
         cell.accessoryView = timeLabel;
     } else if (indexPath.row == 3) {
+        // 添加按钮
         cell.textLabel.text = @"";
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
@@ -577,9 +563,10 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
         [cell.contentView addSubview:addContainer];
         cell.accessoryView = nil;
     } else {
+        // WiFi规则单元格
         WiFiRuleCell *ruleCell = [tableView dequeueReusableCellWithIdentifier:@"RuleCell" forIndexPath:indexPath];
         NSInteger ruleIndex = indexPath.row - 4;
-        if (ruleIndex >= 0 && ruleIndex < (NSInteger)self.rules.count) {
+        if (ruleIndex >= 0 && ruleIndex < self.rules.count) {
             WIFIRule *rule = self.rules[ruleIndex];
             [ruleCell configureWithRule:rule];
             ruleCell.delegate = self;
@@ -613,6 +600,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
 
     if (indexPath.row == 2) {
+        // 不生效时段设置
         [self showDisabledTimePicker];
     }
 }
@@ -621,18 +609,18 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     if (indexPath.row < 4) return nil;
 
     NSInteger ruleIndex = indexPath.row - 4;
-    if (ruleIndex < 0 || ruleIndex >= (NSInteger)self.rules.count) return nil;
+    if (ruleIndex < 0 || ruleIndex >= self.rules.count) return nil;
 
     UIContextualAction *deleteAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive
                                                                                title:@"删除"
-                                                                             handler:^(UIContextualAction *action, __kindof UIView *sourceView, void (^completionHandler)(BOOL)) {
+                                                                             handler:^(UIContextualAction *action, UIView *sourceView, void (^completionHandler)(BOOL)) {
         [self deleteRule:ruleIndex];
         completionHandler(YES);
     }];
 
     UIContextualAction *editAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal
                                                                             title:@"编辑"
-                                                                          handler:^(UIContextualAction *action, __kindof UIView *sourceView, void (^completionHandler)(BOOL)) {
+                                                                          handler:^(UIContextualAction *action, UIView *sourceView, void (^completionHandler)(BOOL)) {
         [self editRule:ruleIndex];
         completionHandler(YES);
     }];
@@ -660,6 +648,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
                                                                    message:@"在该时段内不会执行任何快捷指令"
                                                             preferredStyle:UIAlertControllerStyleAlert];
 
+    // 创建时段选择器视图
     UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 270, 150)];
 
     UILabel *startLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 10, 130, 20)];
@@ -678,6 +667,7 @@ static NSString *const kPreferenceIdentifier = @"com.wifiautoshortcut.launcher";
     startPicker.datePickerMode = UIDatePickerModeTime;
     startPicker.preferredDatePickerStyle = UIDatePickerStyleWheels;
 
+    // 解析当前设置的时间
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     formatter.dateFormat = @"HH:mm";
     if (self.disabledStartTime) {

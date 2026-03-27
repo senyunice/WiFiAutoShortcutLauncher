@@ -147,7 +147,7 @@
 
 #pragma mark - Configuration
 
-- (void)configureWithRule:(WIFIRule *)rule {
+- (void)configureWithRule:(id)rule {
     if ([rule isKindOfClass:[WIFIRule class]]) {
         WIFIRule *wifiRule = (WIFIRule *)rule;
         self.wifiNameLabel.text = wifiRule.ssid;
