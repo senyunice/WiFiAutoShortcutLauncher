@@ -16,18 +16,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential clang llvm make automake autoconf libtool \
-            curl git perl unzip xz-utils cpio \
-            libncurses-dev python3 uuid-dev libbz2-dev
+            curl git perl unzip xz-utils cpio
 
       - name: Clone Theos
         run: |
           git clone --depth 1 https://github.com/theos/theos.git $HOME/theos
 
-      - name: Install iOS SDK
+      - name: Download and extract iOS SDK
         run: |
           cd $HOME/theos/sdks
-          curl -Ls https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz | tar xf -
-          ls -la
+          echo "Downloading iOS SDK..."
+          curl -L --retry 3 --retry-delay 5 \
+            -o iPhoneOS.sdk.tar.xz \
+            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
+          echo "Download complete, size: $(du -h iPhoneOS.sdk.tar.xz)"
+          echo "Extracting..."
+          tar -xf iPhoneOS.sdk.tar.xz && rm iPhoneOS.sdk.tar.xz
+          echo "Extract complete"
+          ls -la $HOME/theos/sdks/
 
       - name: Build tweak
         env:
@@ -38,6 +44,7 @@ jobs:
           export PATH=$HOME/theos/bin:$PATH
           cd ${{ github.workspace }}
           make package ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1
+          echo "---Build done---"
           ls -la packages/ 2>/dev/null || echo "No packages dir"
 
       - name: Upload artifact
