@@ -1,0 +1,12 @@
+Package: com.wifiautoshortcut.launcher
+Name: WiFi自动快捷指令启动器
+Version: 1.0.0
+Description: 当iPhone连接到指定WiFi时自动运行快捷指令
+Section: Tweaks
+Maintainer: WiFiAutoShortcut
+Author: WiFiAutoShortcut
+Architecture: iphoneos-arm
+Depends: mobilesubstrate (>= 0.9.5000), preferenceloader (>= 2.0.0), com.conorthedev.mious (>= 1.0.0)
+Provides: com.wifiautoshortcut.launcher
+Conflicts:
+Installed-Size: 102400

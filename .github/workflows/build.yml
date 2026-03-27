@@ -1,0 +1,38 @@
+name: Build iOS Tweak
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Theos
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl git perl make unzip
+          git clone https://github.com/theos/theos.git $HOME/theos
+          echo 'export THEOS=$HOME/theos' >> $GITHUB_ENV
+          echo 'export PATH=$THEOS/bin:$PATH' >> $GITHUB_ENV
+      - name: Build
+        env:
+          THEOS_DEVICE_IP: ${{ secrets.THEOS_DEVICE_IP }}
+          THEOS_DEVICE_PORT: 2222
+          THEOS_PACKAGE_DIR: ${{ github.workspace }}/packages
+          EC_IDENTITY_FILE: ${{ secrets.EC_IDENTITY_FILE }}
+          EC_IDENTITY_PASSWORD: ${{ secrets.EC_IDENTITY_PASSWORD }}
+        run: |
+          cd ${{ github.workspace }}
+          export THEOS=$HOME/theos
+          export PATH=$THEOS/bin:$PATH
+          mkdir -p packages
+          make package
+          ls -la packages/
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-packages
+          path: packages/*.deb
