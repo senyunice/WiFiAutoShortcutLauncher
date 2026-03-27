@@ -30,18 +30,26 @@ jobs:
           curl -L --connect-timeout 30 --max-time 600 \
             -o iPhoneOS.sdk.tar.xz \
             https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
-          ls -lh iPhoneOS.sdk.tar.xz
-          tar xf iPhoneOS.sdk.tar.xz
-          rm iPhoneOS.sdk.tar.xz
-          ls /tmp/theos/sdks/
+          tar xf iPhoneOS.sdk.tar.xz && rm iPhoneOS.sdk.tar.xz
 
       - name: Build tweak
         env:
           THEOS: /tmp/theos
+          PATH: /tmp/theos/bin:/usr/local/bin:/usr/bin:/bin
         run: |
+          echo "=== Environment ==="
+          echo "THEOS=$THEOS"
+          echo "PATH=$PATH"
+          echo "=== Testing dm.pl ==="
+          ls /tmp/theos/bin/dm.pl
+          perl /tmp/theos/bin/dm.pl --version 2>&1 | head -3
+          echo "which dm.pl: $(which dm.pl 2>&1 || echo 'not found')"
+          echo "=== Files in workspace ==="
+          ls -la
+          echo "=== Running make ==="
           cd ${{ github.workspace }}
           make package THEOS=/tmp/theos ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1
-          echo "---Build done---"
+          echo "=== Done ==="
           find . -name "*.deb" -type f
 
       - name: Upload artifact
