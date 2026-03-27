@@ -12,13 +12,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface WiFiRuleCell : UITableViewCell
 
-@property (nonatomic, weak, nullable) id<WiFiRuleCellDelegate> delegate;
-@property (nonatomic, strong, readonly) UISwitch *enabledSwitch;
-@property (nonatomic, strong, readonly) UILabel *wifiNameLabel;
-@property (nonatomic, strong, readonly) UILabel *shortcutNameLabel;
-@property (nonatomic, strong, readonly) UILabel *scheduleLabel;
-@property (nonatomic, strong, readonly) UIButton *editButton;
-@property (nonatomic, strong, readonly) UIButton *deleteButton;
+@property (nonatomic, assign, nullable) id<WiFiRuleCellDelegate> delegate;
+@property (nonatomic, strong, readwrite) UISwitch *enabledSwitch;
+@property (nonatomic, strong, readwrite) UILabel *wifiNameLabel;
+@property (nonatomic, strong, readwrite) UILabel *shortcutNameLabel;
+@property (nonatomic, strong, readwrite) UILabel *scheduleLabel;
+@property (nonatomic, strong, readwrite) UIButton *editButton;
+@property (nonatomic, strong, readwrite) UIButton *deleteButton;
 
 - (void)configureWithRule:(WIFIRule *)rule;
 

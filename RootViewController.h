@@ -6,8 +6,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RootViewController : UIViewController <UITableViewDelegate, UITableViewDataSource>
 
-@property (nonatomic, strong, readonly) UITableView *mainTableView;
-@property (nonatomic, strong, readonly) NSMutableArray<WIFIRule *> *rules;
+@property (nonatomic, strong, readwrite) UITableView *mainTableView;
+@property (nonatomic, strong, readwrite) NSMutableArray<WIFIRule *> *rules;
 @property (nonatomic, assign) BOOL isEnabled;
 @property (nonatomic, assign) BOOL weekdayModeEnabled;
 @property (nonatomic, assign) BOOL weekendModeEnabled;
