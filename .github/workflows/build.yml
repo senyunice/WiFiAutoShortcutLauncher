@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -24,46 +24,41 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/theos/theos.git /tmp/theos
 
-      - name: Fix Theos symlinks
-        run: |
-          cd /tmp/theos
-          perl -v | head -3 || echo "perl not found - will fix symlinks"
-          ls /usr/bin/perl /usr/local/bin/perl 2>/dev/null || echo "perl binaries missing"
-          # Fix broken symlinks in theos/bin that point to non-existent perl
-          for f in bin/*; do
-            if [ -L "$f" ]; then
-              target=$(readlink "$f")
-              if [[ "$target" == *"/usr/bin/perl"* ]] || [[ "$target" == *"/usr/local/bin/perl"* ]]; then
-                if [ ! -e "$f" ]; then
-                  echo "Fixing broken symlink: $f -> $target"
-                  # Replace with direct perl invocation wrapper
-                  rm "$f"
-                fi
-              fi
-            fi
-          done
-          ls -la bin/ | head -10
-
-      - name: Download and install iOS SDK
+      - name: Download iOS SDK
         run: |
           cd /tmp/theos/sdks
-          curl -L --connect-timeout 30 --max-time 600 \
-            -o iPhoneOS.sdk.tar.xz \
-            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
-          tar xf iPhoneOS.sdk.tar.xz && rm iPhoneOS.sdk.tar.xz
+          curl -fSL --connect-timeout 60 --max-time 600 \
+            -o sdk.tar.xz \
+            "https://github.com/senyunice/theos-sdks/releases/download/main/iPhoneOS16.6.sdk.tar.xz" \
+            || curl -fSL --connect-timeout 60 --max-time 600 \
+            -o sdk.tar.xz \
+            "https://github.com/theos/sdks/releases/download/v2.0.0-2/iPhoneOS16.6.sdk.tar.xz" \
+            || curl -fSL --connect-timeout 60 --max-time 600 \
+            -o sdk.tar.xz \
+            "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz"
+          ls -lh sdk.tar.xz || echo "SDK download failed"
+
+      - name: Extract SDK
+        run: |
+          cd /tmp/theos/sdks
+          if [ -f sdk.tar.xz ]; then
+            tar xf sdk.tar.xz && rm sdk.tar.xz
+          fi
+          ls -la /tmp/theos/sdks/
 
       - name: Build tweak
         env:
           THEOS: /tmp/theos
-          PATH: /tmp/theos/bin:/usr/local/bin:/usr/bin:/bin
         run: |
-          which perl || (sudo apt-get install -y perl && echo "Perl installed")
-          perl -v | head -2
-          perl /tmp/theos/bin/dm.pl --version 2>&1 | head -3
+          export THEOS=/tmp/theos
+          export PATH=$THEOS/bin:$PATH
           cd ${{ github.workspace }}
-          make package THEOS=/tmp/theos ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1
-          echo "---Done---"
-          find . -name "*.deb" -type f
+          make package THEOS=/tmp/theos ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1 || make package THEOS=/tmp/theos ARCHS=arm64 TARGET=iphone:clang:latest:14.0 2>&1
+
+      - name: Check output
+        run: |
+          ls -la packages/ 2>/dev/null || echo "No packages dir"
+          find . -name "*.deb" -type f 2>/dev/null
 
       - name: Upload artifact
         if: success()
