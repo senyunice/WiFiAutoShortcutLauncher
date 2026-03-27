@@ -25,22 +25,31 @@ jobs:
           rm -rf /tmp/theos
           git clone --recurse-submodules https://github.com/theos/theos.git /tmp/theos
 
+      - name: Verify Theos submodules
+        run: |
+          ls -la /tmp/theos/bin/dm.pl
+          /usr/bin/perl /tmp/theos/bin/dm.pl --version 2>&1 | head -1 || echo "dm.pl not working"
+
       - name: Install iOS toolchain (Linux)
         run: |
-          cd /tmp/theos/toolchain
+          mkdir -p /tmp/theos/toolchain/linux/iphone/bin
+          cd /tmp/theos/toolchain/linux/iphone/bin
           curl -fSL --connect-timeout 60 --max-time 600 \
-            -o iOSToolchain.tar.xz \
+            -o clang \
             https://github.com/L1ghtmann/llvm-project/releases/download/test-210562a/iOSToolchain-x86_64.tar.xz
-          tar xf iOSToolchain.tar.xz && rm iOSToolchain.tar.xz
-          ls /tmp/theos/toolchain/linux/iphone/bin/clang && echo "Toolchain OK"
+          tar xf clang && rm clang
+          ls /tmp/theos/toolchain/linux/iphone/bin/
+          /tmp/theos/toolchain/linux/iphone/bin/clang --version 2>&1 | head -1 || echo "clang not found"
 
       - name: Download and install iOS SDK
         run: |
           cd /tmp/theos/sdks
           curl -fSL --connect-timeout 30 --max-time 600 \
             -o iPhoneOS.sdk.tar.xz \
-            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
-          tar xf iPhoneOS.sdk.tar.xz && rm iPhoneOS.sdk.tar.xz
+            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz \
+            && tar xf iPhoneOS.sdk.tar.xz && rm iPhoneOS.sdk.tar.xz \
+            || echo "SDK download/extract failed"
+          ls /tmp/theos/sdks/
 
       - name: Build tweak
         env:
@@ -48,7 +57,10 @@ jobs:
           PATH: /tmp/theos/bin:/usr/local/bin:/usr/bin:/bin
         run: |
           cd ${{ github.workspace }}
-          make package THEOS=/tmp/theos ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1
+          ls -la
+          make package THEOS=/tmp/theos ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1 | tee build.log
+          echo "=== BUILD LOG ==="
+          tail -100 build.log
 
       - name: Check output
         run: |
