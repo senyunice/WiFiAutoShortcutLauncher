@@ -11,12 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            clang llvm make automake autoconf libtool \
-            curl git perl unzip xz-utils cpio
+            build-essential clang llvm make automake autoconf libtool \
+            curl git perl unzip xz-utils cpio \
+            libncurses-dev python3 uuid-dev libbz2-dev
 
       - name: Clone Theos
         run: |
@@ -25,9 +26,8 @@ jobs:
       - name: Install iOS SDK
         run: |
           cd $HOME/theos/sdks
-          curl -Ls https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz -o iPhoneOS.sdk.tar.xz
-          tar -xf iPhoneOS.sdk.tar.xz
-          rm iPhoneOS.sdk.tar.xz
+          curl -Ls https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz | tar xf -
+          ls -la
 
       - name: Build tweak
         env:
@@ -37,17 +37,10 @@ jobs:
           export THEOS=$HOME/theos
           export PATH=$HOME/theos/bin:$PATH
           cd ${{ github.workspace }}
-          make package \
-            ARCHS=arm64 \
-            TARGET=iphone:clang:latest:14.0 \
-            FINALPACKAGE=1 2>&1 | tail -40
-          echo "---"
-          echo "Looking for .deb files:"
-          find . -name "*.deb" -type f 2>/dev/null
+          make package ARCHS=arm64 TARGET=iphone:clang:latest:14.0 FINALPACKAGE=1 2>&1
           ls -la packages/ 2>/dev/null || echo "No packages dir"
 
-      - name: Upload .deb artifact
-        if: success()
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: WiFiAutoShortcutLauncher-deb
